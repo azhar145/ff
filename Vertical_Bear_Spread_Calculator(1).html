@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vertical Bear Spread Calculator</title>
+<style>
+:root{font-family:Arial,Helvetica,sans-serif;color:#172033;background:#f3f6fb}*{box-sizing:border-box}body{margin:0;padding:22px}main{max-width:1000px;margin:auto;background:#fff;padding:24px;border-radius:16px;box-shadow:0 8px 30px #17203312}h1{margin:0 0 8px;color:#1746a2;font-size:clamp(24px,4vw,34px)}.subtitle{color:#64748b;margin:0 0 24px}h2{font-size:19px;margin:22px 0 12px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px;color:#334155}input,select{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:9px;font-size:16px;background:white;color:#172033}input:focus,select:focus{outline:2px solid #93c5fd;border-color:#2563eb}button{border:0;border-radius:9px;background:#1d4ed8;color:#fff;font-size:16px;font-weight:700;padding:13px 20px;margin-top:20px;cursor:pointer}button:hover{background:#1e40af}.panel{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:18px}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.metric{background:white;border:1px solid #e2e8f0;border-radius:10px;padding:13px}.metric .label{font-size:12px;color:#64748b;font-weight:700}.metric .value{font-size:21px;font-weight:800;margin-top:6px;overflow-wrap:anywhere}.positive{color:#15803d}.negative{color:#b91c1c}#message{color:#b91c1c;font-weight:700;margin-top:12px}table{width:100%;border-collapse:collapse;margin-top:12px;font-variant-numeric:tabular-nums}th,td{padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:right}th{background:#eff6ff;color:#1e3a8a}th:first-child,td:first-child{text-align:left}.note{font-size:12px;color:#64748b;line-height:1.5;margin-top:18px}@media(max-width:700px){body{padding:10px}main{padding:16px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}table{font-size:13px}th,td{padding:8px 5px}}@media(max-width:420px){.grid{grid-template-columns:1fr}}
+</style></head>
+<body><main>
+<h1>Vertical Bear Spread Calculator</h1><p class="subtitle">Bear Put and Bear Call · expiration profit/loss calculator</p>
+<h2>Spread inputs</h2><div class="grid">
+<div class="field"><label for="type">Spread type</label><select id="type"><option value="put">Bear Put</option><option value="call">Bear Call</option></select></div>
+<div class="field"><label for="buyStrike">Buy strike</label><input id="buyStrike" type="number" step="any" value="450"></div>
+<div class="field"><label for="buyPremium">Buy premium</label><input id="buyPremium" type="number" min="0" step="any" value="6"></div>
+<div class="field"><label for="sellStrike">Sell strike</label><input id="sellStrike" type="number" step="any" value="390"></div>
+<div class="field"><label for="sellPremium">Sell premium</label><input id="sellPremium" type="number" min="0" step="any" value="2"></div>
+<div class="field"><label for="contracts">Contracts</label><input id="contracts" type="number" min="1" step="1" value="1"></div></div>
+<h2>Stock price range</h2><div class="grid">
+<div class="field"><label for="currentPrice">Stock price to evaluate</label><input id="currentPrice" type="number" min="0" step="any" value="440"></div>
+<div class="field"><label for="minPrice">Minimum stock price</label><input id="minPrice" type="number" min="0" step="any" value="300"></div>
+<div class="field"><label for="maxPrice">Maximum stock price</label><input id="maxPrice" type="number" min="0" step="any" value="500"></div>
+<div class="field"><label for="increment">Price increment</label><input id="increment" type="number" min="0.01" step="any" value="10"></div></div>
+<button id="calculate" type="button">Calculate profit / loss</button><div id="message" role="alert"></div>
+<section class="panel" aria-live="polite"><h2 style="margin-top:0">Results at expiration</h2><div class="metrics">
+<div class="metric"><div class="label">Profit / loss at selected price</div><div class="value" id="selectedResult">—</div></div>
+<div class="metric"><div class="label">Maximum profit</div><div class="value positive" id="maxProfit">—</div></div>
+<div class="metric"><div class="label">Maximum loss</div><div class="value negative" id="maxLoss">—</div></div>
+<div class="metric"><div class="label">Breakeven stock price</div><div class="value" id="breakeven">—</div></div></div>
+<p id="openingCost"></p><p id="explanation"></p></section>
+<h2>Profit / loss by stock price</h2><div style="overflow-x:auto"><table><thead><tr><th>Stock price</th><th>Spread intrinsic value</th><th>Profit / loss</th></tr></thead><tbody id="resultsTable"></tbody></table></div>
+<p class="note">Calculations assume standard U.S. equity option contracts representing 100 shares each and hold both options through expiration. Values exclude commissions, fees, taxes, slippage and early assignment. Educational use only; not investment advice.</p>
+</main>
+<script>
+(()=>{const $=id=>document.getElementById(id);const money=n=>(n<0?"-$":"$")+Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});const price=n=>"$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});const putText=(id,v)=>$(id).textContent=v;
+function fail(msg){$("message").textContent=msg;$("resultsTable").innerHTML="";["selectedResult","maxProfit","maxLoss","breakeven","openingCost","explanation"].forEach(id=>putText(id,"—"));}
+function calculate(){ $("message").textContent="";const type=$("type").value,buyK=Number($("buyStrike").value),buyP=Number($("buyPremium").value),sellK=Number($("sellStrike").value),sellP=Number($("sellPremium").value),contracts=Number($("contracts").value),current=Number($("currentPrice").value),min=Number($("minPrice").value),max=Number($("maxPrice").value),step=Number($("increment").value);const vals=[buyK,buyP,sellK,sellP,contracts,current,min,max,step];
+if(vals.some(v=>!Number.isFinite(v)))return fail("Enter a valid number in every field.");if(buyK<=sellK)return fail("The buy strike must be higher than the sell strike.");if(buyP<0||sellP<0)return fail("Premiums cannot be negative.");if(!Number.isInteger(contracts)||contracts<1)return fail("Contracts must be a whole number of at least 1.");if(current<0||min<0||max<min||step<=0)return fail("Check the stock price range and increment.");
+const width=buyK-sellK,net=type==="put"?buyP-sellP:sellP-buyP;if(net<0)return fail(type==="put"?"Bear Put requires buy premium greater than or equal to sell premium (net debit).":"Bear Call requires sell premium greater than or equal to buy premium (net credit).");if(net>width)return fail("Net debit/credit cannot exceed the difference between the strikes.");const mult=100*contracts;
+const intrinsic=s=>type==="put"?Math.max(buyK-s,0)-Math.max(sellK-s,0):Math.max(s-sellK,0)-Math.max(s-buyK,0);const pnl=s=>(intrinsic(s)-net)*mult;const maxProfit=(width-net)*mult,maxLoss=net*mult,be=type==="put"?buyK-net:sellK+net,selected=pnl(current);
+$("selectedResult").textContent=(selected>=0?"Profit ":"Loss ")+money(Math.abs(selected));$("selectedResult").className="value "+(selected>=0?"positive":"negative");putText("maxProfit",money(maxProfit));putText("maxLoss",money(-maxLoss));putText("breakeven",price(be));putText("openingCost","Initial "+(type==="put"?"debit":"credit")+": "+money(net*mult)+" total");putText("explanation",type==="put"?"Bear Put: maximum profit at or below the sell strike; breakeven at buy strike minus net debit; maximum loss at or above buy strike.":"Bear Call: maximum profit at or below the sell strike; breakeven at sell strike plus net credit; maximum loss at or above buy strike.");
+const count=Math.floor((max-min)/step+1e-10);if(count>5000)return fail("Too many table rows. Increase the price increment.");const prices=[];for(let i=0;i<=count;i++)prices.push(Number((min+i*step).toFixed(8)));if(!prices.length||Math.abs(prices[prices.length-1]-max)>1e-7)prices.push(max);if(current>=min&&current<=max&&!prices.some(x=>Math.abs(x-current)<1e-7))prices.push(current);prices.sort((a,b)=>a-b);$("resultsTable").innerHTML=prices.map(s=>{const v=intrinsic(s)*mult,p=pnl(s);return `<tr><td>${price(s)}</td><td>${money(v)}</td><td class="${p>=0?"positive":"negative"}">${p>0?"+":""}${money(p)}</td></tr>`;}).join("");}
+$("calculate").addEventListener("click",calculate);["type","buyStrike","buyPremium","sellStrike","sellPremium","contracts","currentPrice","minPrice","maxPrice","increment"].forEach(id=>$(id).addEventListener("change",calculate));calculate();})();
+</script></body></html>
